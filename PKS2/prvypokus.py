@@ -9,11 +9,23 @@ IPV4_HEADER_WITH_DESTINATION_IP = 20
 IPV4_TO_PROTOCOL = 9
 ARP_TO_SOURCE_IP = 14
 ARP_TO_TARGET_IP = 24
-IPV6_SOURCE_IP = 8
-IPV6_DESTINATION_IP = 24
+ARP_TO_OPERATION = 6
+UDP_HEADER = 8
 
 
+icmpList = []
+tftpList = []
+komunikaciaTftp = []
 vysielajuceAdresy = []
+requestARP = []
+replyARP = []
+
+UDPPort = -1
+TFTPKomunikacia = 0
+
+ICMPkomunikacia = 0
+ICMPSourceIP = ""
+ICMPDestinatioIP = ""
 
 
 class VysielajuceAdresy:
@@ -48,33 +60,138 @@ class ARPHeader:
         self.sourceIP = sourceIP
     def initTargetIP(self, targetIP):
         self.targetIP = targetIP
+    def initZakladneParametre(self, cisloRamca, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
+        self.cisloRamca = cisloRamca
+        self.dlzkaPoMediu = dlzkaPoMediu
+        self.dlzkaPcap = dlzkaPcap
+        self.vypisHexaGulas = vypisHexaGulas
+    def initSourceMAC(self, sourceMAC):
+        self.sourceMAC = sourceMAC
+    def initDestination(self, destinationMAC):
+        self.destinationMAC = destinationMAC
+    def initOperation(self, operation):
+        self.operation = operation
 
 
-def vytvorVypisHexaGulas(bajty):
+class ICMProtocol:
+    def initZakladneParametre(self, cisloRamca, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
+        self.cisloRamca = cisloRamca
+        self.dlzkaPoMediu = dlzkaPoMediu
+        self.dlzkaPcap = dlzkaPcap
+        self.vypisHexaGulas = vypisHexaGulas
+    def initSourceMac(self, sourceMAC):
+        self.sourceMAC = sourceMAC
+    def initDestinationMAC(self, destinationMAC):
+        self.destinationMAC = destinationMAC
+    def initIPv4Header(self, ipv4header):
+        self.ipv4header = ipv4header
+    def initType(self, typeHodnota, typeNazov):
+        self.typeHodnota = typeHodnota
+        self.typeNazov = typeNazov
+
+
+class TFTProtocol:
+    def initZakladneParametre(self, cisloRamca, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, komunikacia):
+        self.cisloRamca = cisloRamca
+        self.dlzkaPoMediu = dlzkaPoMediu
+        self.dlzkaPcap = dlzkaPcap
+        self.vypisHexaGulas = vypisHexaGulas
+        self.komunikacia = komunikacia
+    def initSourceMac(self, sourceMAC):
+        self.sourceMAC = sourceMAC
+    def initDestinationMAC(self, destinationMAC):
+        self.destinationMAC = destinationMAC
+    def initIPv4Header(self, ipv4header):
+        self.ipv4header = ipv4header
+    def initUDPPorty(self, sourcePort, destinationPort):
+        self.sourcePort = sourcePort
+        self.destinationPort = destinationPort
+
+
+def vypisICMP(icmpProtocol):
+    global ICMPSourceIP, ICMPDestinatioIP, ICMPkomunikacia
+    if (ICMPSourceIP == "" and ICMPDestinatioIP == ""):
+        ICMPkomunikacia += 1
+        print("KOMUNIKACIA: " + str(ICMPkomunikacia))
+        ICMPSourceIP = icmpProtocol.ipv4header.sourceIP
+        ICMPDestinatioIP = icmpProtocol.ipv4header.destinationIP
+    elif ((ICMPSourceIP != icmpProtocol.ipv4header.sourceIP or ICMPDestinatioIP != icmpProtocol.ipv4header.destinationIP) and
+          (ICMPSourceIP != icmpProtocol.ipv4header.destinationIP or ICMPDestinatioIP != icmpProtocol.ipv4header.sourceIP)):
+        ICMPkomunikacia += 1
+        print("KOMUNIKACIA: " + str(ICMPkomunikacia))
+        ICMPSourceIP = icmpProtocol.ipv4header.sourceIP
+        ICMPDestinatioIP = icmpProtocol.ipv4header.destinationIP
+    print("ramec " + str(icmpProtocol.cisloRamca))
+    print("dlzka ramca poskytnuta pcap API - " + str(icmpProtocol.dlzkaPcap))
+    print("dlzka ramca prenasaneho po mediu - " + str(icmpProtocol.dlzkaPoMediu))
+    print("Ethernet II")
+    print("Zdrojova MAC adresa: " + str(icmpProtocol.sourceMAC))
+    print("Cielova MAC adresa: " + str(icmpProtocol.destinationMAC))
+    print("IPv4")
+    print("zdrojova IP adresa: " + str(icmpProtocol.ipv4header.sourceIP))
+    print("cielova IP adresa: " + str(icmpProtocol.ipv4header.destinationIP))
+    print("ICMP")
+    print("Type: " + str(icmpProtocol.typeHodnota) + " " + str(icmpProtocol.typeNazov))
+    print(icmpProtocol.vypisHexaGulas + "\n")
+
+
+def vypisTFTP(tftpProtocol):
+    global TFTPKomunikacia
+    if (tftpProtocol.komunikacia != TFTPKomunikacia):
+        TFTPKomunikacia += 1
+        print("KOMUNIKACIA: " + str(tftpProtocol.komunikacia))
+    print("ramec " + str(tftpProtocol.cisloRamca))
+    print("dlzka ramca poskytnuta pcap API - " + str(tftpProtocol.dlzkaPcap))
+    print("dlzka ramca prenasaneho po mediu - " + str(tftpProtocol.dlzkaPoMediu))
+    print("Ethernet II")
+    print("Zdrojova MAC adresa: " + str(tftpProtocol.sourceMAC))
+    print("Cielova MAC adresa: " + str(tftpProtocol.destinationMAC))
+    print("IPv4")
+    print("zdrojova IP adresa: " + str(tftpProtocol.ipv4header.sourceIP))
+    print("cielova IP adresa: " + str(tftpProtocol.ipv4header.destinationIP))
+    print("UDP")
+    print("zdrojovy port: " + str(tftpProtocol.sourcePort))
+    print("cielovy port: " + str(tftpProtocol.destinationPort))
+    print(tftpProtocol.vypisHexaGulas + "\n")
+
+
+def vypisARP(arpFrame):
+    print("Zdrojova IP: " + arpFrame.sourceIP + ", Cielova IP: " + arpFrame.targetIP)
+    print("ramec " + str(arpFrame.cisloRamca))
+    print("dlzka ramca poskytnuta pcap API - " + str(arpFrame.dlzkaPcap) + " B")
+    print("dlzka ramca prenasaneho po mediu - " + str(arpFrame.dlzkaPoMediu) + " B")
+    print("Ethernet II")
+    print("ARP")
+    print("Zdrojova MAC adresa: " + arpFrame.sourceMAC)
+    print("Cielova MAC adresa: " + arpFrame.destinationMAC)
+    print(arpFrame.vypisHexaGulas + "\n")
+
+
+def vytvorVypisHexaGulas(bajty): # vytvorim si gulas, ktory musim vypisat po analyze daneho ramca
     vypisHexaGulas = ""
 
     for i in range(len(bajty)):
-        if (i % 16 == 0) and (i != 0):
+        if (i % 16 == 0) and (i != 0): # ked mam 16 bajtov v jednom riadku, tak ich oddelim novym riadkom
             vypisHexaGulas += "\n"
-        elif (i % 8 == 0) and (i != 0):
+        elif (i % 8 == 0) and (i != 0): # v strede riadku dám medzeru pre priehladnost
             vypisHexaGulas += "  "
-        elif i != 0:
+        elif i != 0: # oddelujem bity medzerami
             vypisHexaGulas += " "
-        if bajty[i] < 16:
+        if bajty[i] < 16: # ak je ak je bajt mensi ako 16, tak by mi mohlo vypisat len 0 az F, len ja potrebujem 2 miesta, preto davam pred hodnotu 0
             vypisHexaGulas += "0" + str(format(bajty[i], "X"))
-        else:
+        else: # v opacnom priprade len priradim prekonvertovane cislo do hexadeximalnej sustavy do vypisu
             vypisHexaGulas += str(format(bajty[i], "X"))
 
-    return vypisHexaGulas
+    return vypisHexaGulas # vratim navarene
 
 
-def vytvorDSTMAC(bajty):
+def vytvorDSTMAC(bajty): # funkcia mi vrati destination MAC address v hexadecimalnom tvare
     destinationMAC = ""
 
     for i in range(len(bajty)):
-        if i != len(bajty):
+        if i != len(bajty): # oddelujem jednotlive bity medzerami
             destinationMAC += " "
-        if bajty[i] < 16:
+        if bajty[i] < 16: # zase ten isty problem ako pri vypisHexaGulas
             destinationMAC += "0" + str(format(bajty[i], "X"))
         else:
             destinationMAC += str(format(bajty[i], "X"))
@@ -82,7 +199,7 @@ def vytvorDSTMAC(bajty):
     return destinationMAC
 
 
-def vytvorSRCMAC(bajty):
+def vytvorSRCMAC(bajty): # vytvaram analogicky ako pri destination MAC address, len je ine rozmedzie bajtov passovane do funkcie
     sourceMAC = ""
 
     for i in range(len(bajty)):
@@ -96,16 +213,16 @@ def vytvorSRCMAC(bajty):
     return sourceMAC
 
 
-def getSourceIP(bajty):
+def getSourceIP(bajty): # dostanem source IP z funkcie
     sourceIp = ""
     for i in range(len(bajty)):
         sourceIp += str(bajty[i])
-        if (i != 3):
+        if (i != 3): # oddelujem kazdy oktet bodkou
             sourceIp += "."
     return sourceIp
 
 
-def getDestinationIP(bajty):
+def getDestinationIP(bajty): # funkcia funguje presne ako getSourceIP, len do nej passujem ine rozmedzie bajtov
     destinationIp = ""
     for i in range(len(bajty)):
         destinationIp += str(bajty[i])
@@ -114,7 +231,7 @@ def getDestinationIP(bajty):
     return destinationIp
 
 
-def getSourcePort(bajty, ipv4header):
+def getSourcePort(bajty, ipv4header): # dostanem source port z TCP alebo UDP
     sourcePort = ""
     for i in range(len(bajty[(ETHERNET_HEADER + ipv4header.dlzkaHlavicka):(ETHERNET_HEADER + ipv4header.dlzkaHlavicka + 2)])):
         if bajty[ETHERNET_HEADER + ipv4header.dlzkaHlavicka + i] < 16:
@@ -124,7 +241,7 @@ def getSourcePort(bajty, ipv4header):
     return int(sourcePort, 16)
 
 
-def getDestinationPort(bajty, ipv4header):
+def getDestinationPort(bajty, ipv4header): # dostanem destination port z TCP alebo UDP
     destinationPort = ""
     for i in range(len(bajty[(ETHERNET_HEADER + ipv4header.dlzkaHlavicka + 2):(ETHERNET_HEADER + ipv4header.dlzkaHlavicka + 4)])):
         if bajty[ETHERNET_HEADER + ipv4header.dlzkaHlavicka + 2 + i] < 16:
@@ -138,6 +255,7 @@ def zistiSRCaDSTPortTCP(bajty, ipv4header):
     port = ""
     sourcePort = getSourcePort(bajty, ipv4header)
     destinationPort = getDestinationPort(bajty, ipv4header)
+    # hodnoty, ktore mi boli vratene z funkcii budem vyhldavat v textaku pre tcp porty
     with open("tcp_port.txt", "r") as file:
         count = 0
         for line in file:
@@ -147,9 +265,9 @@ def zistiSRCaDSTPortTCP(bajty, ipv4header):
                     port = file.readline().rstrip("\n")
                     break
     file.close()
-    if (port != ""):
+    if (port != ""): # ak je to znamy port, tak ho vypisem aj s jeho cislom
         print("zdrojovy port: " + str(sourcePort) + " " + port)
-    else:
+    else: # inak vypisem iba cislo
         print("zdrojovy port: " + str(sourcePort))
     port = ""
 
@@ -168,33 +286,98 @@ def zistiSRCaDSTPortTCP(bajty, ipv4header):
         print("cielovy port: " + str(destinationPort))
 
 
-def zistiSRCaDSTPortUDP(bajty, ipv4header):
+def pridajTFTPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, destinationPort, cisloKomunikacia):
+    tftpProtocol = TFTProtocol()
+    tftpProtocol.initZakladneParametre(frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, cisloKomunikacia)
+    tftpProtocol.initDestinationMAC(vytvorDSTMAC(bajty[0:ETHERNET_START_SOURCE_MAC]))
+    tftpProtocol.initSourceMac(vytvorSRCMAC(bajty[ETHERNET_START_SOURCE_MAC:ETHERNET_WITHOUT_LENGTH]))
+    tftpProtocol.initIPv4Header(ipv4header)
+    tftpProtocol.initUDPPorty(sourcePort, destinationPort)
+    komunikaciaTftp.append(tftpProtocol)
+
+
+def pridajTFTPKomunikaciuDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, destinationPort):
+    global komunikaciaTftp
+    if (TFTPKomunikacia == 0):
+        pridajTFTPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, destinationPort, TFTPKomunikacia + 1)
+    else:
+        tftpList.append(komunikaciaTftp)
+        komunikaciaTftp = []
+        pridajTFTPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, destinationPort, TFTPKomunikacia + 1)
+
+
+def zistiSRCaDSTPortUDP(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
+    portSRC = ""
+    portDST = ""
+    global UDPPort, TFTPKomunikacia
     sourcePort = getSourcePort(bajty, ipv4header)
     destinationPort = getDestinationPort(bajty, ipv4header)
+
     with open("udp_port.txt", "r") as file:
         count = 0
         for line in file:
             count += 1
             if count % 2 != 0:
-                if int(line) == sourcePort:
-                    print(file.readline().rstrip("\n"))
+               if int(line) == sourcePort:
+                    portSRC = file.readline().rstrip("\n")
                     break
     file.close()
-    print("zdrojovy port: " + str(sourcePort))
+    if (portSRC != ""):
+        print("zdrojovy port: " + str(sourcePort) + " " + portSRC)
+    else:
+        print("zdrojovy port: " + str(sourcePort))
 
-    with open("udp_port", "r") as file:
+    with open("udp_port.txt", "r") as file:
         count = 0
         for line in file:
             count += 1
             if count % 2 != 0:
                 if int(line) == destinationPort:
-                    print(file.readline().rstrip("\n"))
+                    portDST = file.readline().rstrip("\n")
                     break
     file.close()
-    print("cielovy port: " + str(destinationPort))
+    if (portDST != ""):
+        print("cielovy port: " + str(destinationPort) + " " + portDST)
+    else:
+        print("cielovy port: " + str(destinationPort))
+
+    if (portSRC == "tftp" or portDST == "tftp"):
+        if (portSRC == "tfpt"):
+            UDPPort = destinationPort
+        else:
+            UDPPort = sourcePort
+        pridajTFTPKomunikaciuDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, destinationPort)
+        TFTPKomunikacia += 1
+    elif (UDPPort == sourcePort or UDPPort == destinationPort):
+        pridajTFTPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, destinationPort, TFTPKomunikacia)
+
+def getICMPType(icmpTypeHodnota):
+    icmpTypeNazov = ""
+    with open("icmp_type.txt", "r") as file:
+        count = 0
+        for line in file:
+            count += 1
+            if count % 2 != 0:
+                if int(line) == icmpTypeHodnota:
+                    icmpTypeNazov = file.readline().rstrip("\n")
+                    break
+    file.close()
+    return icmpTypeNazov
 
 
-def zistiIPv4Protocol(ipv4header, bajty):
+def pridajICMPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
+    icmpProtocol = ICMProtocol()
+    icmpProtocol.initZakladneParametre(frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
+    icmpProtocol.initDestinationMAC(vytvorDSTMAC(bajty[0:ETHERNET_START_SOURCE_MAC]))
+    icmpProtocol.initSourceMac(vytvorSRCMAC(bajty[ETHERNET_START_SOURCE_MAC:ETHERNET_WITHOUT_LENGTH]))
+    icmpProtocol.initIPv4Header(ipv4header)
+    icmpTypeHodnota = int(bajty[ETHERNET_HEADER + ipv4header.dlzkaHlavicka])
+    icmpTypeNazov = getICMPType(icmpTypeHodnota)
+    icmpProtocol.initType(icmpTypeHodnota, icmpTypeNazov)
+    icmpList.append(icmpProtocol)
+
+
+def zistiIPv4Protocol(ipv4header, bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
     with open("ipv4.txt", "r") as file:
         count = 0
         for line in file:
@@ -206,20 +389,22 @@ def zistiIPv4Protocol(ipv4header, bajty):
     file.close()
 
     priradena = "nie"
-    if (ipv4header.protocol == 6):
+    if (ipv4header.protocol == 6): # TCP
         for i in range(len(vysielajuceAdresy)):
             if ipv4header.sourceIP == vysielajuceAdresy[i].vysielajucaAdresa:
                 vysielajuceAdresy[i].increasePocetRamcov()
                 priradena = "ano"
                 break
-        if (priradena == "nie"):
+        if (priradena == "nie"): # ak sa vysielajuca IP v zozname este nenachadza, tak ju tam pridam, inak iba zvysim pocet ramcov, ktore odoslala
             vysielajuceAdresy.append((VysielajuceAdresy(ipv4header.sourceIP)))
         zistiSRCaDSTPortTCP(bajty, ipv4header)
-    elif (ipv4header.protocol == 17):
-        zistiSRCaDSTPortUDP(bajty, ipv4header)
+    elif (ipv4header.protocol == 17): # UDP
+        zistiSRCaDSTPortUDP(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
+    elif (ipv4header.protocol == 1): # ICMP
+        pridajICMPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
 
 
-def analyzujIPv4(bajty):
+def analyzujIPv4(bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
     ipv4header = IPv4Header()
     ipv4header.initDestinationIP(getDestinationIP(bajty[(ETHERNET_HEADER + IPV4_HEADER_WITH_SOURCE_IP):(ETHERNET_HEADER + IPV4_HEADER_WITH_DESTINATION_IP)]))
     ipv4header.initSourceIP(getSourceIP(bajty[(ETHERNET_HEADER + IPV4_HEADER_WITHOUT_IPS):(ETHERNET_HEADER + IPV4_HEADER_WITH_SOURCE_IP)]))
@@ -228,13 +413,23 @@ def analyzujIPv4(bajty):
 
     print("zdrojova IP adresa: " + ipv4header.sourceIP)
     print("cielova IP adresa: " + ipv4header.destinationIP)
-    zistiIPv4Protocol(ipv4header, bajty)
+    zistiIPv4Protocol(ipv4header, bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
 
 
-def analyzujARP(bajty):
+def analyzujARP(bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
     arpHeader = ARPHeader()
+    arpHeader.initZakladneParametre(frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
+    arpHeader.initDestination(vytvorDSTMAC(bajty[0:ETHERNET_START_SOURCE_MAC]))
+    arpHeader.initSourceMAC(vytvorSRCMAC(bajty[ETHERNET_START_SOURCE_MAC:ETHERNET_WITHOUT_LENGTH]))
     arpHeader.initSourceIP(getSourceIP(bajty[(ETHERNET_HEADER + ARP_TO_SOURCE_IP):(ETHERNET_HEADER + ARP_TO_SOURCE_IP + 4)]))
     arpHeader.initTargetIP(getDestinationIP(bajty[(ETHERNET_HEADER + ARP_TO_TARGET_IP):(ETHERNET_HEADER + ARP_TO_TARGET_IP + 4)]))
+    operation = int.from_bytes(bajty[ETHERNET_HEADER + ARP_TO_OPERATION:ETHERNET_HEADER + ARP_TO_OPERATION + 2], byteorder='big')
+    if (operation == 1):
+        arpHeader.initOperation("ARP - Request")
+        requestARP.append(arpHeader)
+    elif (operation == 2):
+        arpHeader.initOperation("ARP - Reply")
+        replyARP.append(arpHeader)
 
     print("zdrojova IP adresa: " + arpHeader.sourceIP)
     print("cielova IP adresa: " + arpHeader.targetIP)
@@ -250,6 +445,7 @@ def vypisMACAdries(bajty):
 
 def getSNAPEthernetType(bajty):
     ethernetType = ""
+    nasiel = "nie"
 
     for i in range(len(bajty[20:22])):
         if bajty[20 + i] < 16:
@@ -264,8 +460,13 @@ def getSNAPEthernetType(bajty):
             count += 1
             if count % 2 != 0:
                 if int(line) == ethernetTypeHodnota:
-                    print(file.readline().rstrip("\n"))
+                    nasiel = "ano"
+                    ethernetType = file.readline().rstrip("\n")
                     break
+    if (nasiel == "ano"):
+        print(ethernetType)
+    else:
+        print("Hodnota ether typu: " + str(ethernetTypeHodnota))
     file.close()
 
 
@@ -298,7 +499,7 @@ def printEthernetType(ethernetTypeHodnota):
     file.close()
 
 
-def checkLengthOrEthernetType(bajty):
+def checkLengthOrEthernetType(bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
     ethernetType = ""
 
     for i in range(len(bajty[ETHERNET_WITHOUT_LENGTH:ETHERNET_HEADER])):
@@ -312,9 +513,9 @@ def checkLengthOrEthernetType(bajty):
         vypisMACAdries(bajty)
         printEthernetType(ethernetTypeHodnota)
         if (ethernetTypeHodnota == 2048): # IPv4
-            analyzujIPv4(bajty)
+            analyzujIPv4(bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
         elif (ethernetTypeHodnota == 2054): # ARP
-            analyzujARP(bajty)
+            analyzujARP(bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
     else:
         getIEEE(bajty)
         vypisMACAdries(bajty)
@@ -322,8 +523,8 @@ def checkLengthOrEthernetType(bajty):
 
 def main():
     frameNumber = 1
-    pkts_list = rdpcap("C:\\Users\\Jakub.DESKTOP-0IDDC3B\\PycharmProjects\\PKS2\\eth-1.pcap")
-
+    dlzkaPoMediu = 0
+    pkts_list = rdpcap("C:\\Users\\Jakub.DESKTOP-0IDDC3B\\PycharmProjects\\PKS2\\vzorky_pcap_na_analyzu\\trace-2.pcap")
     for i in range(len(pkts_list)):
         bajty = raw(pkts_list[i])
         vypisHexaGulas = vytvorVypisHexaGulas(bajty)
@@ -331,13 +532,18 @@ def main():
         print("dlzka ramca poskytnuta pcap API - " + str(len(pkts_list[i])) +" B")
         if len(pkts_list[i]) <= 60:
             print("dlzka ramca prenasaneho po mediu - 64 B")
+            dlzkaPoMediu = 64
         else:
             print("dlzka ramca prenasaneho po mediu - " + str(len(pkts_list[i]) + 4) + " B")
-        checkLengthOrEthernetType(bajty)
+            dlzkaPoMediu = str(len(pkts_list[i]) + 4)
+        checkLengthOrEthernetType(bajty, frameNumber, dlzkaPoMediu, len(pkts_list[i]), vypisHexaGulas)
         print("")
         print(vypisHexaGulas + "\n")
 
         frameNumber += 1
+
+    if (len(komunikaciaTftp) > 0):
+        tftpList.append(komunikaciaTftp)
 
     mostPacketSent = ""
     packetNumberMostPacketSent = 0
@@ -352,5 +558,56 @@ def main():
     print("\nAdresa uzla s najvacsim poctom odoslanych paketov:")
     print(mostPacketSent + "  " + str(packetNumberMostPacketSent) + " paketov")
 
+    operacia = ""
+    while(operacia != "k"):
+        operacia = input("Vypisat ICMP - i, TFTP - t, ARP - a, koniec - k\n")
+        if (operacia == "i"):
+            global ICMPkomunikacia
+            ICMPkomunikacia = 0
+            print("\n------------------")
+            print("|ICMP komunikacia|")
+            print("------------------")
+            for i in range(len(icmpList)):
+                vypisICMP(icmpList[i])
+        elif (operacia == "t"):
+            global TFTPKomunikacia
+            TFTPKomunikacia = 0
+            print("\n------------------")
+            print("|TFTP komunikacia|")
+            print("------------------")
+            for i in range(len(tftpList)):
+                if (len(tftpList[i]) > 20):
+                    for j in range(0,10):
+                        vypisTFTP(tftpList[i][j])
+                    for j in range(len(tftpList[i]) - 10, len(tftpList[i])):
+                        vypisTFTP(tftpList[i][j])
+                else:
+                    for j in range(len(tftpList[i])):
+                        vypisTFTP(tftpList[i][j])
+        elif (operacia == 'a'):
+            neuplne = []
+            komunikaciaCislo = 1
+            print("\n-----------------")
+            print("|ARP komunikacia|")
+            print("-----------------")
+            for i in range(len(requestARP)):
+                for j in range(len(replyARP)):
+                    if (requestARP[i].targetIP == replyARP[j].sourceIP):
+                        print("UPLNA")
+                        print("KOMUNIKACIA c." + str(komunikaciaCislo))
+                        print("ARP-Request, IP adresa: " + requestARP[i].targetIP + ", MAC adresa: ???")
+                        vypisARP(requestARP[i])
+                        print("ARP-Reply, IP adresa: " + replyARP[j].sourceIP + ", MAC adresa: " + replyARP[j].sourceMAC)
+                        vypisARP(replyARP[j])
+                        komunikaciaCislo += 1
+                    elif (j == len(replyARP) - 1):
+                        neuplne.append(requestARP[i])
+            komunikaciaCislo = 1
+            for i in range(len(neuplne)):
+                print("NEUPLNA")
+                print("KOMUNIKACIA c." + str(komunikaciaCislo))
+                print("ARP-Request, IP adresa: " + neuplne[i].targetIP + ", MAC adresa: ???")
+                vypisARP(neuplne[i])
+                komunikaciaCislo += 1
 
 main()
