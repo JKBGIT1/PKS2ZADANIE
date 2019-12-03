@@ -19,6 +19,12 @@ komunikaciaTftp = []
 vysielajuceAdresy = []
 requestARP = []
 replyARP = []
+httpList = []
+httpsList = []
+telnetList = []
+sshList = []
+ftpDataList = []
+ftpControlList = []
 
 UDPPort = -1
 TFTPKomunikacia = 0
@@ -108,6 +114,25 @@ class TFTProtocol:
         self.destinationPort = destinationPort
 
 
+class IPv4Ramce:
+    def initZakladneParametre(self, cisloRamca, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
+        self.cisloRamca = cisloRamca
+        self.dlzkaPoMediu = dlzkaPoMediu
+        self.dlzkaPcap = dlzkaPcap
+        self.vypisHexaGulas = vypisHexaGulas
+    def initSoureceMac(self, sourceMAC):
+        self.sourceMAC = sourceMAC
+    def initDestinationMAC(self, destinationMAC):
+        self.destinationMAC = destinationMAC
+    def initIPV4Header(self, ipv4header):
+        self.ipv4header = ipv4header
+    def initPorty(self, sourcePort, sourceNazov, destinatonPort, destinationNazov):
+        self.sourcePort = sourcePort
+        self.sourceNazov = sourceNazov
+        self.destinationPort = destinatonPort
+        self.destinationNazov = destinationNazov
+
+
 def vypisICMP(icmpProtocol):
     global ICMPSourceIP, ICMPDestinatioIP, ICMPkomunikacia
     if (ICMPSourceIP == "" and ICMPDestinatioIP == ""):
@@ -165,6 +190,22 @@ def vypisARP(arpFrame):
     print("Zdrojova MAC adresa: " + arpFrame.sourceMAC)
     print("Cielova MAC adresa: " + arpFrame.destinationMAC)
     print(arpFrame.vypisHexaGulas + "\n")
+
+
+def vypisIPv4Ramec(ramec):
+    print("ramec " + str(ramec.cisloRamca))
+    print("dlzka ramca poskytnuta pcap API - " + str(ramec.dlzkaPcap))
+    print("dlzka ramca prenasaneho po mediu - " + str(ramec.dlzkaPoMediu))
+    print("Ethernet II")
+    print("Zdrojova MAC adresa: " + str(ramec.sourceMAC))
+    print("Cielova MAC adresa: " + str(ramec.destinationMAC))
+    print("IPv4")
+    print("zdrojova IP adresa: " + str(ramec.ipv4header.sourceIP))
+    print("cielova IP adresa: " + str(ramec.ipv4header.destinationIP))
+    print("TCP")
+    print("zdrojovy port: " + str(ramec.sourcePort) + " " + str(ramec.sourceNazov))
+    print("cielovy port: " + str(ramec.destinationPort) + " " + str(ramec.destinationNazov))
+    print(ramec.vypisHexaGulas + "\n")
 
 
 def vytvorVypisHexaGulas(bajty): # vytvorim si gulas, ktory musim vypisat po analyze daneho ramca
@@ -251,7 +292,47 @@ def getDestinationPort(bajty, ipv4header): # dostanem destination port z TCP ale
     return int(destinationPort, 16)
 
 
-def zistiSRCaDSTPortTCP(bajty, ipv4header):
+def vytvorIPv4Ramec(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov):
+    ramec = IPv4Ramce()
+    ramec.initZakladneParametre(frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
+    ramec.initDestinationMAC(vytvorDSTMAC(bajty[0:ETHERNET_START_SOURCE_MAC]))
+    ramec.initSoureceMac(vytvorSRCMAC(bajty[ETHERNET_START_SOURCE_MAC:ETHERNET_WITHOUT_LENGTH]))
+    ramec.initIPV4Header(ipv4header)
+    ramec.initPorty(sourcePort, sourceNazov, destinationPort, destinationNazov)
+    return ramec
+
+
+def pridajHTTPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov):
+    ramec = vytvorIPv4Ramec(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov)
+    httpList.append(ramec)
+
+
+def pridajHTTPSDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov):
+    ramec = vytvorIPv4Ramec(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov)
+    httpsList.append(ramec)
+
+
+def pridajTelnetDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov):
+    ramec = vytvorIPv4Ramec(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov)
+    telnetList.append(ramec)
+
+
+def pridajSSHDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov):
+    ramec = vytvorIPv4Ramec(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov)
+    sshList.append(ramec)
+
+
+def pridajFtpDataDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov):
+    ramec = vytvorIPv4Ramec(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov)
+    ftpDataList.append(ramec)
+
+
+def pridajFtpControlDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov):
+    ramec = vytvorIPv4Ramec(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourceNazov, destinationPort, destinationNazov)
+    ftpControlList.append(ramec)
+
+
+def zistiSRCaDSTPortTCP(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas):
     port = ""
     sourcePort = getSourcePort(bajty, ipv4header)
     destinationPort = getDestinationPort(bajty, ipv4header)
@@ -269,6 +350,7 @@ def zistiSRCaDSTPortTCP(bajty, ipv4header):
         print("zdrojovy port: " + str(sourcePort) + " " + port)
     else: # inak vypisem iba cislo
         print("zdrojovy port: " + str(sourcePort))
+    sourcePortNazov = port
     port = ""
 
     with open("tcp_port.txt", "r") as file:
@@ -284,6 +366,19 @@ def zistiSRCaDSTPortTCP(bajty, ipv4header):
         print("cielovy port: " + str(destinationPort) + " " + port)
     else:
         print("cielovy port: " + str(destinationPort))
+
+    if (sourcePortNazov == "http" or port == "http"):
+        pridajHTTPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourcePortNazov, destinationPort, port)
+    if (sourcePortNazov == "https (ssl)" or port == "https (ssl)"):
+        pridajHTTPSDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourcePortNazov, destinationPort, port)
+    if (sourcePortNazov == "telnet" or port == "telnet"):
+        pridajTelnetDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourcePortNazov, destinationPort, port)
+    if (sourcePortNazov == "ssh" or port == "ssh"):
+        pridajSSHDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourcePortNazov, destinationPort, port)
+    if (sourcePortNazov == "ftp-data" or port == "ftp-data"):
+        pridajFtpDataDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourcePortNazov, destinationPort, port)
+    if (sourcePortNazov == "ftp-control" or port == "ftp-control"):
+        pridajFtpControlDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, sourcePortNazov, destinationPort, port)
 
 
 def pridajTFTPDoListu(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas, sourcePort, destinationPort, cisloKomunikacia):
@@ -397,7 +492,7 @@ def zistiIPv4Protocol(ipv4header, bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, v
                 break
         if (priradena == "nie"): # ak sa vysielajuca IP v zozname este nenachadza, tak ju tam pridam, inak iba zvysim pocet ramcov, ktore odoslala
             vysielajuceAdresy.append((VysielajuceAdresy(ipv4header.sourceIP)))
-        zistiSRCaDSTPortTCP(bajty, ipv4header)
+        zistiSRCaDSTPortTCP(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
     elif (ipv4header.protocol == 17): # UDP
         zistiSRCaDSTPortUDP(bajty, ipv4header, frameNumber, dlzkaPoMediu, dlzkaPcap, vypisHexaGulas)
     elif (ipv4header.protocol == 1): # ICMP
@@ -524,7 +619,7 @@ def checkLengthOrEthernetType(bajty, frameNumber, dlzkaPoMediu, dlzkaPcap, vypis
 def main():
     frameNumber = 1
     dlzkaPoMediu = 0
-    pkts_list = rdpcap("C:\\Users\\Jakub.DESKTOP-0IDDC3B\\PycharmProjects\\PKS2\\vzorky_pcap_na_analyzu\\trace-2.pcap")
+    pkts_list = rdpcap("C:\\Users\\Jakub.DESKTOP-0IDDC3B\\PycharmProjects\\PKS2\\vzorky_pcap_na_analyzu\\eth-6.pcap")
     for i in range(len(pkts_list)):
         bajty = raw(pkts_list[i])
         vypisHexaGulas = vytvorVypisHexaGulas(bajty)
@@ -560,7 +655,7 @@ def main():
 
     operacia = ""
     while(operacia != "k"):
-        operacia = input("Vypisat ICMP - i, TFTP - t, ARP - a, koniec - k\n")
+        operacia = input("Vypisat ICMP - i, TFTP - t, ARP - a, HTTP - h, HTTPS - hs, Telnet - te, FTP-data - fd, FTP-control -fc, koniec - k\n")
         if (operacia == "i"):
             global ICMPkomunikacia
             ICMPkomunikacia = 0
@@ -609,5 +704,36 @@ def main():
                 print("ARP-Request, IP adresa: " + neuplne[i].targetIP + ", MAC adresa: ???")
                 vypisARP(neuplne[i])
                 komunikaciaCislo += 1
+        elif (operacia == 'h'):
+            print("\n------------------")
+            print("|HTTP komunikacia|")
+            print("------------------")
+            for i in range(len(httpList)):
+                vypisIPv4Ramec(httpList[i])
+        elif(operacia == 'hs'):
+            print("\n-------------------")
+            print("|HTTPS komunikacia|")
+            print("-------------------")
+            for i in range(len(httpsList)):
+                vypisIPv4Ramec(httpsList[i])
+        elif(operacia == 'te'):
+            print("\n--------------------")
+            print("|TELNET komunikacia|")
+            print("--------------------")
+            for i in range(len(telnetList)):
+                vypisIPv4Ramec(telnetList[i])
+        elif(operacia == 'fd'):
+            print("\n----------------------")
+            print("|FTP-data komunikacia|")
+            print("----------------------")
+            for i in range(len(ftpDataList)):
+                vypisIPv4Ramec(ftpDataList[i])
+        elif(operacia == 'fc'):
+            print("\n-------------------------")
+            print("|FTP-control komunikacia|")
+            print("-------------------------")
+            for i in range(len(ftpControlList)):
+                vypisIPv4Ramec(ftpControlList[i])
+
 
 main()
